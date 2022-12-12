@@ -13,7 +13,7 @@ pub enum EightDParseError<E> {
     Utf8Error(#[from] std::str::Utf8Error),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum Item {
     OneLine(String),
     MultiLine(Vec<String>),
@@ -60,13 +60,13 @@ fn to_map<'a, E: ParseError<&'a [u8]>>(
 
         if one.is_empty() {
             let multi = std::str::from_utf8(&multi)?;
-            let multi = multi.split("\n").map(|x| x.to_string()).collect();
+            let multi = multi.split('\n').map(|x| x.to_string()).collect();
 
             result.insert(k, Item::MultiLine(multi));
             continue;
         }
 
-        result.insert(k, Item::OneLine(std::str::from_utf8(&one)?.to_string()));
+        result.insert(k, Item::OneLine(std::str::from_utf8(one)?.to_string()));
     }
 
     Ok(result)

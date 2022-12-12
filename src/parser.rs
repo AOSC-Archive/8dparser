@@ -7,6 +7,10 @@ use nom::{
     IResult,
 };
 
+type KeyValueResult<'a> = IResult<&'a [u8], (&'a [u8], (&'a [u8], Vec<u8>))>;
+type SinglePackageResult<'a> = IResult<&'a [u8], Vec<(&'a [u8], (&'a [u8], Vec<u8>))>>;
+type MultiPackageResult<'a> = IResult<&'a [u8], Vec<Vec<(&'a [u8], (&'a [u8], Vec<u8>))>>>;
+
 #[inline]
 fn key_name(input: &[u8]) -> IResult<&[u8], &[u8]> {
     verify(handle_key, |input: &[u8]| {
@@ -37,7 +41,7 @@ fn separator(input: &[u8]) -> IResult<&[u8], ()> {
 }
 
 #[inline]
-fn key_value(input: &[u8]) -> IResult<&[u8], (&[u8], (&[u8], Vec<u8>))> {
+fn key_value(input: &[u8]) -> KeyValueResult {
     separated_pair(key_name, separator, value_field)(input)
 }
 
@@ -78,12 +82,12 @@ fn multi_to_one(input: &[u8]) -> IResult<&[u8], Vec<u8>> {
 }
 
 #[inline]
-pub fn single_package(input: &[u8]) -> IResult<&[u8], Vec<(&[u8], (&[u8], Vec<u8>))>> {
+pub fn single_package(input: &[u8]) -> SinglePackageResult {
     terminated(many1(key_value), multispace0)(input)
 }
 
 #[inline]
-pub fn multi_package(input: &[u8]) -> IResult<&[u8], Vec<Vec<(&[u8], (&[u8], Vec<u8>))>>> {
+pub fn multi_package(input: &[u8]) -> MultiPackageResult {
     many1(single_package)(input)
 }
 
