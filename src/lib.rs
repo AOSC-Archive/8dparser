@@ -1,14 +1,13 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, fmt::Display};
 
-use nom::error::ParseError;
 use thiserror::Error;
 
 mod parser;
 
 #[derive(Error, Debug)]
-pub enum EightDParseError<E> {
+pub enum EightDParseError {
     #[error(transparent)]
-    ParseError(#[from] nom::Err<E>),
+    ParseError(#[from] NomErrorWrap),
     #[error(transparent)]
     Utf8Error(#[from] std::str::Utf8Error),
 }
@@ -19,6 +18,17 @@ pub enum Item {
     MultiLine(Vec<String>),
 }
 
+#[derive(Debug, Error)]
+pub struct NomErrorWrap {
+    source: nom::Err<nom::error::Error<Vec<u8>>>,
+}
+
+impl Display for NomErrorWrap {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.source.fmt(f)
+    }
+}
+
 type NomParseItem<'a> = Vec<(&'a [u8], (&'a [u8], Vec<u8>))>;
 
 /// Parse a single package:
@@ -26,13 +36,13 @@ type NomParseItem<'a> = Vec<(&'a [u8], (&'a [u8], Vec<u8>))>;
 /// ```rust
 /// use std::process::Command;
 /// use eight_deep_parser::{parse_multi, parse_one, Item};
-/// 
+///
 /// let command = Command::new("dpkg")
 ///     .arg("-s")
 ///     .arg("plasma-workspace")
 ///     .output()
 ///     .unwrap();
-/// 
+///
 /// let stdout = command.stdout;
 ///
 /// let r = parse_one(std::str::from_utf8(&stdout).unwrap()).unwrap();
@@ -42,13 +52,11 @@ type NomParseItem<'a> = Vec<(&'a [u8], (&'a [u8], Vec<u8>))>;
 ///     &Item::OneLine("plasma-workspace".to_string())
 /// );
 ///```
-pub fn parse_one<'a, E: ParseError<&'a [u8]>>(
-    s: &'a str,
-) -> Result<HashMap<String, Item>, EightDParseError<E>>
-where
-    EightDParseError<E>: From<nom::Err<nom::error::Error<&'a [u8]>>>,
-{
-    let (_, parse_v) = parser::single_package(s.as_bytes())?;
+pub fn parse_one(s: &str) -> Result<HashMap<String, Item>, EightDParseError> {
+    let (_, parse_v) = parser::single_package(s.as_bytes()).map_err(|e| NomErrorWrap {
+        source: e.to_owned(),
+    })?;
+
     let result = to_map(parse_v)?;
 
     Ok(result)
@@ -60,7 +68,7 @@ where
 /// ```rust
 /// use std::{fs, io::Read, process::Command};
 /// use eight_deep_parser::{parse_multi, Item};
-/// 
+///
 /// let dir = fs::read_dir("/var/lib/apt/lists").unwrap();
 ///
 /// for i in dir.flatten() {
@@ -77,13 +85,10 @@ where
 ///     assert!(r.is_ok())
 /// }
 /// ```
-pub fn parse_multi<'a, E: ParseError<&'a [u8]>>(
-    s: &'a str,
-) -> Result<Vec<HashMap<String, Item>>, EightDParseError<E>>
-where
-    EightDParseError<E>: From<nom::Err<nom::error::Error<&'a [u8]>>>,
-{
-    let (_, parse_v) = parser::multi_package(s.as_bytes())?;
+pub fn parse_multi(s: &str) -> Result<Vec<HashMap<String, Item>>, EightDParseError> {
+    let (_, parse_v) = parser::multi_package(s.as_bytes()).map_err(|e| NomErrorWrap {
+        source: e.to_owned(),
+    })?;
 
     let mut result = vec![];
 
@@ -94,9 +99,7 @@ where
     Ok(result)
 }
 
-fn to_map<'a, E: ParseError<&'a [u8]>>(
-    parse_v: NomParseItem,
-) -> Result<HashMap<String, Item>, EightDParseError<E>> {
+fn to_map(parse_v: NomParseItem) -> Result<HashMap<String, Item>, EightDParseError> {
     let mut result = HashMap::new();
     for (k, v) in parse_v {
         let (one, multi) = v;
