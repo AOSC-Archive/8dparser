@@ -1,10 +1,10 @@
 use std::{collections::HashMap, fmt::Display};
 
-use thiserror::Error;
 use error::Result;
+use thiserror::Error;
 
-mod parser;
 mod error;
+mod parser;
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum Item {

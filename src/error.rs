@@ -44,7 +44,7 @@ impl From<nom::Err<NomError<&[u8]>>> for ParseError {
     fn from(e: nom::Err<NomError<&[u8]>>) -> Self {
         match e {
             nom::Err::Error(NomError { input, code })
-            | nom::Err::Failure(NomError { input, code }) => match std::str::from_utf8(&input) {
+            | nom::Err::Failure(NomError { input, code }) => match std::str::from_utf8(input) {
                 Ok(s) => ParseError::Other {
                     at: ErrorBytes::Valid(s.to_owned()),
                     kind: code,
