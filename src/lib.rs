@@ -1,16 +1,10 @@
 use std::{collections::HashMap, fmt::Display};
 
 use thiserror::Error;
+use error::Result;
 
 mod parser;
-
-#[derive(Error, Debug)]
-pub enum EightDParseError {
-    #[error(transparent)]
-    ParseError(#[from] NomErrorWrap),
-    #[error(transparent)]
-    Utf8Error(#[from] std::str::Utf8Error),
-}
+mod error;
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum Item {
@@ -52,10 +46,8 @@ type NomParseItem<'a> = Vec<(&'a [u8], (&'a [u8], Vec<u8>))>;
 ///     &Item::OneLine("plasma-workspace".to_string())
 /// );
 ///```
-pub fn parse_one(s: &str) -> Result<HashMap<String, Item>, EightDParseError> {
-    let (_, parse_v) = parser::single_package(s.as_bytes()).map_err(|e| NomErrorWrap {
-        source: e.to_owned(),
-    })?;
+pub fn parse_one(s: &str) -> Result<HashMap<String, Item>> {
+    let (_, parse_v) = parser::single_package(s.as_bytes())?;
 
     let result = to_map(parse_v)?;
 
@@ -85,10 +77,8 @@ pub fn parse_one(s: &str) -> Result<HashMap<String, Item>, EightDParseError> {
 ///     assert!(r.is_ok())
 /// }
 /// ```
-pub fn parse_multi(s: &str) -> Result<Vec<HashMap<String, Item>>, EightDParseError> {
-    let (_, parse_v) = parser::multi_package(s.as_bytes()).map_err(|e| NomErrorWrap {
-        source: e.to_owned(),
-    })?;
+pub fn parse_multi(s: &str) -> Result<Vec<HashMap<String, Item>>> {
+    let (_, parse_v) = parser::multi_package(s.as_bytes())?;
 
     let mut result = vec![];
 
@@ -99,7 +89,7 @@ pub fn parse_multi(s: &str) -> Result<Vec<HashMap<String, Item>>, EightDParseErr
     Ok(result)
 }
 
-fn to_map(parse_v: NomParseItem) -> Result<HashMap<String, Item>, EightDParseError> {
+fn to_map(parse_v: NomParseItem) -> Result<HashMap<String, Item>> {
     let mut result = HashMap::new();
     for (k, v) in parse_v {
         let (one, multi) = v;
