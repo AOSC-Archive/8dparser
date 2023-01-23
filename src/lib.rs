@@ -153,7 +153,7 @@ mod tests {
 
     #[test]
     fn parse_multi_it_works() {
-        let dir = fs::read_dir("/var/lib/apt/lists").unwrap();
+        let dir = fs::read_dir("/var/lib/apt/lists/").unwrap();
 
         for i in dir.flatten() {
             if !i.file_name().to_str().unwrap().ends_with("_Packages") {
