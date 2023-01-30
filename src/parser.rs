@@ -61,14 +61,6 @@ fn multi_line_single(input: &[u8]) -> IResult<&[u8], &[u8]> {
 }
 
 #[inline]
-fn comment(input: &[u8]) -> IResult<&[u8], ()> {
-    map(
-        many0(delimited(tag("--"), take_until("-\n"), tag("-\n"))),
-        |_| (),
-    )(input)
-}
-
-#[inline]
 fn multi_line(input: &[u8]) -> IResult<&[u8], Vec<&[u8]>> {
     many0(multi_line_single)(input)
 }
@@ -96,7 +88,7 @@ pub fn single_package(input: &[u8]) -> SinglePackageResult {
 
 #[inline]
 pub fn multi_package(input: &[u8]) -> MultiPackageResult {
-    many1(preceded(comment, single_package))(input)
+    many1(single_package)(input)
 }
 
 #[test]
@@ -197,13 +189,3 @@ fn test_single_package() {
         ))
     )
 }
-
-#[test]
-fn test_comment() {
-    let test = b"---abc---\n";
-
-    let c = comment(test);
-
-    assert!(c.is_ok())
-}
-
