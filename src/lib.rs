@@ -6,7 +6,7 @@ use thiserror::Error;
 mod error;
 mod parser;
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Item {
     OneLine(String),
     MultiLine(Vec<String>),
