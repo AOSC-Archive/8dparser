@@ -1,7 +1,7 @@
 use std::fmt::Display;
 
 use error::Result;
-use indexmap::IndexMap;
+pub use indexmap::IndexMap;
 use thiserror::Error;
 
 mod error;
