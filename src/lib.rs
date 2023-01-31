@@ -79,6 +79,10 @@ pub fn parse_one(s: &str) -> Result<IndexMap<String, Item>> {
 /// }
 /// ```
 pub fn parse_multi(s: &str) -> Result<Vec<IndexMap<String, Item>>> {
+    if s.is_empty() {
+        return Ok(Vec::new());
+    }
+
     let (_, parse_v) = parser::multi_package(s.as_bytes())?;
 
     let mut result = vec![];
