@@ -1,6 +1,7 @@
-use std::{collections::HashMap, fmt::Display};
+use std::fmt::Display;
 
 use error::Result;
+use indexmap::IndexMap;
 use thiserror::Error;
 
 mod error;
@@ -46,7 +47,7 @@ type NomParseItem<'a> = Vec<(&'a [u8], (&'a [u8], Vec<u8>))>;
 ///     &Item::OneLine("plasma-workspace".to_string())
 /// );
 ///```
-pub fn parse_one(s: &str) -> Result<HashMap<String, Item>> {
+pub fn parse_one(s: &str) -> Result<IndexMap<String, Item>> {
     let (_, parse_v) = parser::single_package(s.as_bytes())?;
 
     let result = to_map(parse_v)?;
@@ -77,7 +78,7 @@ pub fn parse_one(s: &str) -> Result<HashMap<String, Item>> {
 ///     assert!(r.is_ok())
 /// }
 /// ```
-pub fn parse_multi(s: &str) -> Result<Vec<HashMap<String, Item>>> {
+pub fn parse_multi(s: &str) -> Result<Vec<IndexMap<String, Item>>> {
     let (_, parse_v) = parser::multi_package(s.as_bytes())?;
 
     let mut result = vec![];
@@ -89,8 +90,8 @@ pub fn parse_multi(s: &str) -> Result<Vec<HashMap<String, Item>>> {
     Ok(result)
 }
 
-fn to_map(parse_v: NomParseItem) -> Result<HashMap<String, Item>> {
-    let mut result = HashMap::new();
+fn to_map(parse_v: NomParseItem) -> Result<IndexMap<String, Item>> {
+    let mut result = IndexMap::new();
     for (k, v) in parse_v {
         let (one, multi) = v;
         let k = std::str::from_utf8(k)?.to_string();
@@ -109,11 +110,76 @@ fn to_map(parse_v: NomParseItem) -> Result<HashMap<String, Item>> {
     Ok(result)
 }
 
+/// Parse back:
+/// 
+/// ```rust
+/// use indexmap::IndexMap;
+/// use eight_deep_parser::{parse_back, Item};
+/// 
+/// fn test_parse_back() {
+///     let mut map = vec![];
+///
+///     let mut item1 = IndexMap::new();
+///     item1.insert("a".to_string(), Item::OneLine("b".to_string()));
+///     item1.insert(
+///         "c".to_string(),
+///         Item::MultiLine(vec!["a".to_string(), "b".to_string()]),
+///     );
+///     item1.insert("d".to_string(), Item::OneLine("e".to_string()));
+///     map.push(item1);
+///
+///     let mut item2 = IndexMap::new();
+///     item2.insert("a".to_string(), Item::OneLine("b".to_string()));
+///     map.push(item2);
+///
+///     let s = parse_back(&map);
+///
+///     assert_eq!(
+///         s,
+///         r#"a: b
+/// c:
+///   a
+///   b
+/// d: e
+///
+/// a: b
+///
+/// "#
+///     )
+/// }
+
+/// ```
+
+pub fn parse_back(map: &[IndexMap<String, Item>]) -> String {
+    let mut s = String::new();
+    for i in map {
+        for (k, v) in i {
+            s += &format!("{}:", k);
+
+            match v {
+                Item::OneLine(v) => s += &format!(" {}\n", v),
+                Item::MultiLine(v) => {
+                    s += "\n";
+                    for i in v {
+                        s += &format!("  {}\n", i);
+                    }
+                }
+            }
+        }
+
+        s += "\n";
+    }
+
+    s
+}
+
 #[cfg(test)]
 mod tests {
     use std::{fs, io::Read, process::Command};
 
-    use crate::{parse_multi, parse_one, Item};
+    use indexmap::IndexMap;
+
+    use crate::{parse_back, parse_multi, parse_one, Item};
 
     #[test]
     fn parse_one_it_works() {
@@ -168,5 +234,38 @@ mod tests {
 
             assert!(r.is_ok())
         }
+    }
+
+    #[test]
+    fn test_parse_back() {
+        let mut map = vec![];
+
+        let mut item1 = IndexMap::new();
+        item1.insert("a".to_string(), Item::OneLine("b".to_string()));
+        item1.insert(
+            "c".to_string(),
+            Item::MultiLine(vec!["a".to_string(), "b".to_string()]),
+        );
+        item1.insert("d".to_string(), Item::OneLine("e".to_string()));
+        map.push(item1);
+
+        let mut item2 = IndexMap::new();
+        item2.insert("a".to_string(), Item::OneLine("b".to_string()));
+        map.push(item2);
+
+        let s = parse_back(&map);
+
+        assert_eq!(
+            s,
+            r#"a: b
+c:
+  a
+  b
+d: e
+
+a: b
+
+"#
+        )
     }
 }

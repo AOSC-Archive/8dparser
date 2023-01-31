@@ -13,3 +13,4 @@ repository = "https://github.com/AOSC-Dev/8dparser"
 [dependencies]
 nom = "7.1"
 thiserror = "1.0"
+indexmap = "1.9"
